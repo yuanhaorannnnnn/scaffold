@@ -1,0 +1,44 @@
+# =============================================================================
+# 10-env — Environment variables & PATH
+# Uses add_path() to prevent duplicates
+# =============================================================================
+
+# --- PATH helper (prepend, no duplicates) ------------------------------------
+add_path() {
+    case ":$PATH:" in
+        *":$1:"*) ;;
+        *) PATH="$1:$PATH" ;;
+    esac
+}
+
+# --- CUDA -------------------------------------------------------------------
+export PATH=$PATH:/usr/local/cuda/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/extras/CUPTI/lib64
+
+# --- GCC --------------------------------------------------------------------
+add_path /usr/bin/gcc/bin
+
+# --- CMake 3.28.3 -----------------------------------------------------------
+add_path /opt/cmake-3.28.3-linux-x86_64/bin
+
+# --- Neovim -----------------------------------------------------------------
+add_path /opt/nvim
+
+# --- User local bin ---------------------------------------------------------
+add_path "$HOME/.local/bin"
+
+# --- CARLA / UE5 ------------------------------------------------------------
+export CARLA_UNREAL_ENGINE_PATH=/media/yhr/2T/UE5ForCarla
+
+# --- HuggingFace cache redirect ---------------------------------------------
+export HF_HOME="/media/yhr/2T/.cache"
+
+# --- Editor -----------------------------------------------------------------
+export EDITOR="zed --wait"
+export VISUAL="$EDITOR"
+
+# --- NVM --------------------------------------------------------------------
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"

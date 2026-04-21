@@ -1,0 +1,23 @@
+# ~/.bashrc
+# =============================================================================
+# Modular bash configuration
+# Repository: dotfiles
+# Managed via symlinks — edit files in ~/dotfiles/bash/, then `src` to reload
+# =============================================================================
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# --- module loader -----------------------------------------------------------
+# Files are sourced in lexical order (00-, 10-, 20-, ...)
+DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+
+for module in "$DOTFILES_DIR"/[0-9][0-9]-*; do
+    [ -f "$module" ] && source "$module"
+done
+
+# --- secrets (untracked) -----------------------------------------------------
+[ -f "$DOTFILES_DIR/secrets" ] && source "$DOTFILES_DIR/secrets"

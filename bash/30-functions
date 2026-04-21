@@ -1,0 +1,105 @@
+# =============================================================================
+# 30-functions — Custom bash functions
+# =============================================================================
+
+# --- Proxy toggle -----------------------------------------------------------
+proxy() {
+    export http_proxy="http://127.0.0.1:7890"
+    export https_proxy="http://127.0.0.1:7890"
+    echo "HTTP Proxy On"
+}
+
+noproxy() {
+    unset http_proxy
+    unset https_proxy
+    echo "HTTP Proxy off"
+}
+
+# --- UE5 path switcher ------------------------------------------------------
+ue_path() {
+    if [ "$1" -eq 1 ]; then
+        export CARLA_UNREAL_ENGINE_PATH=$HOME/carlahub/UnrealEngine5_carla
+        echo "CARLA_UNREAL_ENGINE_PATH set to $HOME/carlahub/UnrealEngine5_carla"
+    elif [ "$1" -eq 2 ]; then
+        export CARLA_UNREAL_ENGINE_PATH=/media/yhr/2T/UE5ForCarla
+        echo "CARLA_UNREAL_ENGINE_PATH set to /media/yhr/2T/UE5ForCarla"
+    else
+        echo "Usage: ue_path {1|2}"
+        echo "  1 -> ~/carlahub/UnrealEngine5_carla"
+        echo "  2 -> /media/yhr/2T/UE5ForCarla"
+    fi
+}
+
+# --- CUDA version switcher --------------------------------------------------
+cuda() {
+    local cuda_version=$1
+    local cuda_path="/usr/local/cuda-$cuda_version"
+
+    if [ -d "$cuda_path" ]; then
+        sudo ln -sfn "$cuda_path" /usr/local/cuda
+        export PATH="$cuda_path/bin:$PATH"
+        export LD_LIBRARY_PATH="$cuda_path/lib64:$LD_LIBRARY_PATH"
+        export CUDA_HOME="$cuda_path"
+        export CUDA_VERSION=$cuda_version
+        echo "CUDA environment set to version $cuda_version"
+    else
+        echo "CUDA version $cuda_version not found at $cuda_path"
+        return 1
+    fi
+}
+
+# --- Tar + zip packer -------------------------------------------------------
+tp() {
+    if [ -z "$1" ]; then
+        echo "Usage: tp <folder> [name]"
+        return 1
+    fi
+
+    local folder="${1%/}"
+    local name="${2:-$(basename "$folder")}"
+    local tarfile="$name.tar.gz"
+    local zipfile="$name.zip"
+
+    tar -czvf "$tarfile" "$folder" || return 1
+    zip "$zipfile" "$tarfile" || return 1
+    rm -f "$tarfile"
+    chmod 755 "$zipfile"
+    echo "$zipfile"
+}
+
+# --- Git branch hopper ------------------------------------------------------
+g-() {
+    local n=${1:-1}
+    [[ $n =~ ^[0-9]+$ ]] || { echo "Usage: g- [number]"; return 1; }
+    git switch @{-"$n"}
+}
+
+# --- Docker cleanup (interactive) -------------------------------------------
+docker-clean() {
+    echo "========== Docker Disk Usage =========="
+    docker system df
+    echo
+
+    echo "========== Matching Containers =========="
+    docker ps -a --filter name=oasis_calra
+    echo
+
+    echo "========== Matching Images =========="
+    docker images | grep '^carlaue5'
+    echo
+
+    read -p "⚠️  Proceed with FULL cleanup? (y/N): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "❌ Cancelled."
+        return
+    fi
+
+    echo "🚀 Cleaning..."
+    docker ps -aq --filter name=oasis_calra | xargs -r docker rm -f
+    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | awk '$1 ~ /^carlaue5:/ {print $2}' | xargs -r docker rmi -f
+    docker system prune -f --volumes
+
+    echo
+    echo "========== After Cleanup =========="
+    docker system df
+}
