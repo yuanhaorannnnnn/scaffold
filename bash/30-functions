@@ -74,6 +74,37 @@ g-() {
     git switch @{-"$n"}
 }
 
+# --- Git timeline (two-branch merge-base view) ------------------------------
+git_timeline2() {
+    local A="$1"
+    local B="$2"
+    local BASE
+
+    BASE=$(git merge-base "$A" "$B") || return 1
+
+    echo "A: $A"
+    git show --oneline --decorate --no-patch "$A"
+    echo
+    echo "B: $B"
+    git show --oneline --decorate --no-patch "$B"
+    echo
+    echo "共同祖先:"
+    git show --oneline --decorate --no-patch "$BASE"
+    echo
+    echo "时间线:"
+    git log --graph --oneline --decorate --date-order --boundary \
+        "$A" "$B" --not "$BASE^"
+}
+
+# --- OpenCV pixel reader ----------------------------------------------------
+pix() {
+    if [ -z "${3:-}" ]; then
+        echo "Usage: pix <image> <x> <y>"
+        return 1
+    fi
+    python3 -c "import cv2; img=cv2.imread('$1', cv2.IMREAD_UNCHANGED); print(img[$3,$2])"
+}
+
 # --- Docker cleanup (interactive) -------------------------------------------
 docker-clean() {
     echo "========== Docker Disk Usage =========="

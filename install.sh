@@ -7,6 +7,8 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASHRC_SRC="$REPO_DIR/bash/bashrc"
 BASHRC_DST="$HOME/.bashrc"
+SWITCH_SRC="$REPO_DIR/bin/claude-switch"
+SWITCH_DST="$HOME/.local/bin/claude-switch"
 BACKUP_DIR="$HOME/.bashrc-backups"
 
 echo "📦 Dotfiles installer"
@@ -29,6 +31,22 @@ else
     echo "🔗 Creating symlink ~/.bashrc → $BASHRC_SRC"
 fi
 ln -s "$BASHRC_SRC" "$BASHRC_DST"
+
+# Install local tools
+if [ -f "$SWITCH_SRC" ]; then
+    mkdir -p "$HOME/.local/bin"
+    chmod +x "$SWITCH_SRC"
+
+    if [ -e "$SWITCH_DST" ] && [ ! -L "$SWITCH_DST" ]; then
+        mkdir -p "$BACKUP_DIR"
+        BACKUP_NAME="claude-switch-$(date +%Y%m%d-%H%M%S)"
+        cp "$SWITCH_DST" "$BACKUP_DIR/$BACKUP_NAME"
+        echo "✅ Backed up existing claude-switch → $BACKUP_DIR/$BACKUP_NAME"
+    fi
+
+    ln -sfn "$SWITCH_SRC" "$SWITCH_DST"
+    echo "🔗 Installed claude-switch → $SWITCH_SRC"
+fi
 
 # Check secrets
 echo ""
