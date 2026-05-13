@@ -5,7 +5,19 @@ set -euo pipefail
 CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 CURRENT_CONFIG="$CLAUDE_DIR/settings.json"
 BACKUP_DIR="$CLAUDE_DIR/config_backups"
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+
+# readlink -f polyfill (GNU/BSD compatible)
+_readlink_f() {
+    if command -v greadlink >/dev/null 2>&1; then
+        greadlink -f "$1"
+    elif readlink -f / >/dev/null 2>&1; then
+        readlink -f "$1"
+    else
+        python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$1"
+    fi
+}
+SCRIPT_DIR="$(cd "$(dirname "$(_readlink_f "${BASH_SOURCE[0]}")")" && pwd)"
+unset _readlink_f
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 SECRETS_FILE="${CLAUDE_SWITCH_SECRETS:-$REPO_DIR/bash/secrets}"
 

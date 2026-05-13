@@ -10,22 +10,26 @@ if [ -f "$HOME/software/google-cloud-sdk/completion.bash.inc" ]; then
     . "$HOME/software/google-cloud-sdk/completion.bash.inc"
 fi
 
-# --- Conda ------------------------------------------------------------------
-__conda_setup="$('/home/lkshpc/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/lkshpc/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/lkshpc/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/home/lkshpc/anaconda3/bin:$PATH"
+# --- FZF (portable detection) -----------------------------------------------
+_fzf_init() {
+    # Homebrew (Apple Silicon)
+    if [ -f /opt/homebrew/opt/fzf/shell/key-bindings.bash ]; then
+        source /opt/homebrew/opt/fzf/shell/key-bindings.bash
+        return 0
     fi
-fi
-unset __conda_setup
-
-# --- FZF --------------------------------------------------------------------
-[ -f /usr/share/doc/fzf/examples/key-bindings.bash ] && \
-    source /usr/share/doc/fzf/examples/key-bindings.bash
+    # Homebrew (Intel)
+    if [ -f /usr/local/opt/fzf/shell/key-bindings.bash ]; then
+        source /usr/local/opt/fzf/shell/key-bindings.bash
+        return 0
+    fi
+    # Debian/Ubuntu
+    if [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
+        source /usr/share/doc/fzf/examples/key-bindings.bash
+        return 0
+    fi
+    return 1
+}
+_fzf_init && unset _fzf_init
 
 # --- Starship prompt --------------------------------------------------------
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
