@@ -10,10 +10,38 @@ BASHRC_DST="$HOME/.bashrc"
 SWITCH_SRC="$REPO_DIR/bin/claude-switch"
 SWITCH_DST="$HOME/.local/bin/claude-switch"
 BACKUP_DIR="$HOME/.bashrc-backups"
+OS="$(uname -s)"
 
 echo "📦 Dotfiles installer"
 echo "   Repo: $REPO_DIR"
+echo "   OS:   $OS"
 echo ""
+
+# --- macOS: require Homebrew bash (system bash 3.2 is too old) ---------------
+if [ "$OS" = "Darwin" ]; then
+    BREW_BASH="/opt/homebrew/bin/bash"
+    if [ ! -x "$BREW_BASH" ]; then
+        BREW_BASH="/usr/local/bin/bash"
+    fi
+    if [ ! -x "$BREW_BASH" ]; then
+        echo "⚠️  macOS system bash is too old (3.2). Install Homebrew bash:"
+        echo "   brew install bash"
+        echo "   sudo chsh -s /opt/homebrew/bin/bash \$USER"
+        echo ""
+        read -p "Continue without Homebrew bash? (y/N): " confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            exit 1
+        fi
+    else
+        echo "✅ Homebrew bash: $BREW_BASH ($("$BREW_BASH" --version | head -1))"
+        if [ "$SHELL" != "$BREW_BASH" ]; then
+            echo "⚠️  Current shell is $SHELL, not $BREW_BASH"
+            echo "   Run: sudo chsh -s $BREW_BASH \$USER"
+            echo ""
+        fi
+    fi
+    echo ""
+fi
 
 # Backup existing ~/.bashrc if it's a real file (not already a symlink)
 if [ -f "$BASHRC_DST" ] && [ ! -L "$BASHRC_DST" ]; then
