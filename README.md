@@ -1,102 +1,129 @@
-# dotfiles
+# scaffold
 
-模块化 Bash 配置仓库，通过软链接管理 `~/.bashrc`。
+模块化 Bash 配置仓库，支持 Ubuntu / macOS 双平台，通过软链接管理 `~/.bashrc`。
 
 ## 结构
 
 ```
-dotfiles/
+scaffold/
 ├── bash/
-│   ├── bashrc          # 主入口（被 ~/.bashrc 软链接指向）
-│   ├── 00-core         # Shell 默认行为（历史、提示符、补全）
-│   ├── 10-env          # 环境变量与 PATH（去重 helper）
-│   ├── 20-aliases      # 别名（修复了 kj 冲突）
-│   ├── 30-functions    # 自定义函数（proxy、CUDA、docker-clean 等）
-│   ├── 40-tools        # 第三方工具初始化（conda、fzf、starship、zoxide）
-│   ├── secrets         # API 密钥（gitignored，手动创建）
-│   └── secrets.example # 密钥模板
+│   ├── bashrc                # 主入口，OS 自动检测
+│   ├── common/               # 跨平台通用
+│   │   ├── 00-core           # Shell 默认（history、prompt、shopt）
+│   │   ├── 10-env            # PATH helper、EDITOR、NVM
+│   │   ├── 20-aliases        # 通用别名（ls、git、kj、config）
+│   │   ├── 30-functions      # 通用函数（proxy、tp、git helpers、pix、tmux）
+│   │   └── 40-tools          # 通用工具（gcloud、fzf、starship、zoxide）
+│   ├── linux/                # Ubuntu 专属
+│   │   ├── 00-core           # lesspipe、debian_chroot、dircolors、bash-completion
+│   │   ├── 10-env            # CUDA、GCC、CMake、NVim、CARLA/UE5
+│   │   ├── 20-aliases        # /media 路径、CARLA 构建、nvidia-smi
+│   │   ├── 30-functions      # cuda()、ue_path()
+│   │   └── 40-tools          # conda（anaconda3）、fzf（Debian 路径）
+│   ├── mac/                  # macOS 专属
+│   │   ├── 00-core           # bash-completion（Homebrew 路径）
+│   │   ├── 10-env            # Homebrew PATH
+│   │   ├── 20-aliases        # open（替代 xdg-open）
+│   │   ├── 30-functions      # 预留
+│   │   └── 40-tools          # conda（通用检测）、缺失工具告警
+│   ├── secrets               # API 密钥（gitignored）
+│   └── secrets.example       # 密钥模板
 ├── bin/
-│   └── claude-switch   # Claude Code settings provider 切换工具
-├── install.sh          # 一键安装脚本
+│   ├── claude-switch         # Claude Code 配置切换
+│   ├── deploy                # 一键部署 scaffold + agent-platform + agent-skills
+│   ├── audit-bin             # ~/.local/bin 脚本溯源（pip/conda/npm/apt/自定义）
+│   └── my                    # 输出所有自建 alias/function/script/service
+├── Brewfile                  # macOS Homebrew 依赖清单
+├── install.sh                # 安装脚本（OS 感知）
 └── .gitignore
 ```
 
 ## 安装
 
 ```bash
-cd /media/yhr/2T/files/cc_projects/dotfiles
-./install.sh
+git clone https://github.com/yuanhaorannnnnn/scaffold.git ~/scaffold
+cd ~/scaffold && ./install.sh
 ```
 
-然后复制密钥模板并填入真实值：
+复制密钥模板并填入真实值：
 
 ```bash
 cp bash/secrets.example bash/secrets
-# 编辑 bash/secrets，取消注释并填入你的 token
 ```
 
-## 修改后重载
+修改后重载：`src`（等同于 `source ~/.bashrc`）
+
+### macOS
 
 ```bash
-src   # alias，等同于 source ~/.bashrc
+# 1. 装 Homebrew 后一键装依赖
+brew bundle --file=~/scaffold/Brewfile
+
+# 2. 切换到新版 bash
+sudo chsh -s /opt/homebrew/bin/bash $USER
+
+# 3. 安装
+cd ~/scaffold && ./install.sh
 ```
 
-## Claude Code 配置切换
+## 工具
 
-`claude-switch` 用于在本机的 Claude Code 配置之间切换。它会从
-`~/.claude/settings_*.json` 读取 profile，也可以直接从 `bash/secrets`
-读取内置 profile 变量，并写入 `~/.claude/settings.json`。切换后需要重启
-Claude Code 才会生效。
-
-常用命令：
+### my — 列出所有自建配置
 
 ```bash
-claude-switch list
-claude-switch current
+my                # 全部（alias + function + script + service）
+my --alias         # 只看别名
+my --script        # 只看 ~/.local/bin 中自建脚本
+my --func          # 只看函数
+my --svc           # 只看 systemd 服务
+```
+
+### audit-bin — 脚本溯源
+
+```bash
+audit-bin                     # 审计 ~/.local/bin
+audit-bin ~/other-path        # 审计任意目录
+```
+
+输出每项的类型：`CUSTOM-SHELL` / `CUSTOM-PYTHON` / `PIP` / `CONDA` / `NPM` / `APT` / `BINARY`
+
+### claude-switch — Claude Code 配置切换
+
+```bash
 claude-switch kimi
 claude-switch deepseek
-claude-switch
+claude-switch list
 ```
 
-本地 profile 示例：
-
-```json
-{
-  "env": {
-    "ANTHROPIC_AUTH_TOKEN": "sk-xxxx",
-    "ANTHROPIC_BASE_URL": "https://your-anthropic-compatible-endpoint",
-    "ANTHROPIC_MODEL": "your-model-name"
-  }
-}
-```
-
-官方 Anthropic API 通常使用 `ANTHROPIC_API_KEY`。Kimi、DeepSeek 或其他
-Anthropic-compatible 代理需要映射到 Claude Code 标准变量：
-`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、`ANTHROPIC_MODEL` 以及相关
-default model 变量。
-
-把真实配置保存在 `~/.claude/settings_kimi.json`、
-`~/.claude/settings_deepseek.json` 等本机文件里，不要提交到仓库。
-如果使用 `bash/secrets` 管理变量，则配置如下：
+### deploy — 一键部署全栈
 
 ```bash
-export KIMI_API_KEY="sk-xxxxxxxx"
-export KIMI_ANTHROPIC_BASE_URL="https://your-kimi-anthropic-endpoint"
-export KIMI_ANTHROPIC_MODEL="your-kimi-model"
-
-export DEEPSEEK_API_KEY="sk-xxxxxxxx"
-export DEEPSEEK_ANTHROPIC_BASE_URL="https://your-deepseek-anthropic-endpoint"
-export DEEPSEEK_ANTHROPIC_MODEL="your-deepseek-model"
-export DEEPSEEK_ANTHROPIC_DEFAULT_OPUS_MODEL="your-deepseek-opus-model"
-export DEEPSEEK_ANTHROPIC_DEFAULT_SONNET_MODEL="your-deepseek-sonnet-model"
-export DEEPSEEK_ANTHROPIC_DEFAULT_HAIKU_MODEL="your-deepseek-haiku-model"
-export DEEPSEEK_CLAUDE_CODE_SUBAGENT_MODEL="your-deepseek-haiku-model"
-export DEEPSEEK_CLAUDE_CODE_EFFORT_LEVEL="max"
+./bin/deploy          # 自动 clone 缺失仓库 + 安装
+./bin/deploy --pull   # 同上 + 拉取最新
 ```
 
-## 已修复的问题
+## Secrets 配置
 
-- ✅ `kj` 别名冲突：原复杂 kill 逻辑保留为 `kjsoft`，`kj` 简化为 `kill -9 %%`
-- ✅ PATH 重复：`cmake` 去重，使用 `add_path()` helper
-- ✅ 密钥硬编码：全部迁移到 `bash/secrets`（已加入 `.gitignore`）
-- ✅ CUDA 切换：`ln -s` 改为 `ln -sfn` 原子替换
+```bash
+# 官方 Anthropic
+CLAUDE_ANTHROPIC_API_KEY="sk-ant-xxxxxxxx"
+CLAUDE_ANTHROPIC_MODEL="claude-sonnet-4-5"
+
+# Kimi
+KIMI_API_KEY="sk-xxxxxxxx"
+KIMI_ANTHROPIC_BASE_URL="https://api.kimi.com/coding/"
+KIMI_ANTHROPIC_MODEL="kimi-k2.6"
+
+# DeepSeek
+DEEPSEEK_API_KEY="sk-xxxxxxxx"
+DEEPSEEK_ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+DEEPSEEK_ANTHROPIC_MODEL="deepseek-v4-pro[1m]"
+```
+
+注意：provider 变量不加 `export`，避免泄漏到子进程（如 Codex）。
+
+## Architecture
+
+加载顺序：`common/*` → `linux/*` 或 `mac/*` → `secrets`
+
+OS 层可以覆盖 common 层的任何设置。bashrc 通过 `uname -s` 自动选择平台。
